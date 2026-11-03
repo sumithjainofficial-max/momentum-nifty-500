@@ -1,10 +1,12 @@
 """
-AUTOMATED DAILY PORTFOLIO LIFECYCLE EMAIL DISPATCHER
-Sends the complete Nifty500_Lifecycle_Portfolio_Report.xlsx attachment to:
-- sumith7114@gmail.com
-- mannathkatariya67@gmail.com
-from:
-- sumithjainofficial@gmail.com
+NIFTY 500 INSTITUTIONAL MOMENTUM DESK - DUAL REPORT EMAIL DISPATCHER
+Enforces strict recipient privacy and authorization controls:
+1. sumith7114@gmail.com:
+   - Receives MASTER PORTFOLIO LIFECYCLE (Active Holdings, Wins, Failed, P&L, Strategy B Trailing Stops, Daily Breakouts).
+2. mannathkatariya67@gmail.com:
+   - Receives STOCKS BREAKOUT ANALYSIS ONLY (Targets, Stop-Loss, Technical Setup, Corporate News & Catalysts).
+   - ZERO HOLDINGS, ZERO BALANCES, ZERO PERSONAL DATA.
+   - GATEKEEPER: Dispatches ONLY upon explicit user instruction (requires --confirm-mannath flag).
 """
 
 import os
@@ -20,112 +22,147 @@ from datetime import datetime
 sys.stdout.reconfigure(encoding="utf-8")
 
 SENDER_EMAIL = "sumithjainofficial@gmail.com"
-RECIPIENTS = ["sumith7114@gmail.com", "mannathkatariya67@gmail.com"]
-SUBJECT = f"⚡ NIFTY 500 Institutional Momentum Desk | Daily Lifecycle Report [{datetime.now().strftime('%d-%b-%Y')}]"
+SUMITH_EMAIL = "sumith7114@gmail.com"
+MANNATH_EMAIL = "mannathkatariya67@gmail.com"
 
-ATTACHMENT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Excel", "Nifty500_Lifecycle_Portfolio_Report.xlsx"))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+MASTER_REPORT = os.path.join(BASE_DIR, "Excel", "Nifty500_Lifecycle_Portfolio_Report.xlsx")
+STOCKS_ONLY_REPORT = os.path.join(BASE_DIR, "Excel", "Nifty500_Stock_Breakout_Analysis.xlsx")
 
-def send_lifecycle_report(app_password: str = None):
-    # Check environment or argument
+def get_smtp_connection(app_password: str = None):
     password = app_password or os.getenv("GMAIL_APP_PASSWORD")
     if not password:
-        print("\n[!] GMAIL_APP_PASSWORD not detected.")
-        print("To send automated emails from sumithjainofficial@gmail.com, generate a 16-character Google App Password:")
-        print("1. Go to: https://myaccount.google.com/apppasswords")
-        print("2. Type 'Momentum Desk' and click 'Create'.")
-        print("3. Set in your environment: $env:GMAIL_APP_PASSWORD = 'your-16-char-password'")
-        return False
+        print("[!] GMAIL_APP_PASSWORD not set. Generate a 16-character Google App Password at: https://myaccount.google.com/apppasswords")
+        return None, None
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server.starttls()
+    server.login(SENDER_EMAIL, password.strip())
+    return server, password
 
-    if not os.path.exists(ATTACHMENT_PATH):
-        print(f"[!] Attachment not found at {ATTACHMENT_PATH}. Run generate_lifecycle_workbook.py first.")
+def send_to_sumith(server = None, app_password: str = None):
+    """Dispatches complete master portfolio lifecycle report to Sumith."""
+    owns_server = False
+    if server is None:
+        server, _ = get_smtp_connection(app_password)
+        if not server: return False
+        owns_server = True
+
+    if not os.path.exists(MASTER_REPORT):
+        print(f"[!] Master report missing: {MASTER_REPORT}")
         return False
 
     msg = MIMEMultipart()
     msg["From"] = f"NIFTY 500 Momentum Desk <{SENDER_EMAIL}>"
-    msg["To"] = ", ".join(RECIPIENTS)
-    msg["Subject"] = SUBJECT
+    msg["To"] = SUMITH_EMAIL
+    msg["Subject"] = f"⚡ NIFTY 500 Master Portfolio Lifecycle Audit [{datetime.now().strftime('%d-%b-%Y')}]"
 
-    # High-impact Executive HTML Body
-    html_content = f"""
+    html = f"""
     <html>
-    <head>
-        <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; }}
-            .container {{ max-width: 650px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; }}
-            .header {{ background-color: #0d1117; color: #ffffff; padding: 18px; border-radius: 6px; text-align: center; }}
-            .card {{ background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-top: 15px; }}
-            .kpi-row {{ display: flex; justify-content: space-between; margin-bottom: 8px; }}
-            .kpi-label {{ font-size: 13px; color: #6b7280; font-weight: 600; text-transform: uppercase; }}
-            .kpi-val {{ font-size: 15px; font-weight: bold; color: #111827; }}
-            .green {{ color: #059669 !important; font-weight: bold; }}
-            .badge {{ display: inline-block; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; background: #e0e7ff; color: #3730a3; }}
-            .footer {{ font-size: 11px; color: #9ca3af; text-align: center; margin-top: 24px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h2 style="margin: 0; font-size: 18px; letter-spacing: 0.5px;">⚡ NIFTY 500 MOMENTUM LIFECYCLE AUDIT</h2>
-                <p style="margin: 4px 0 0 0; font-size: 12px; color: #9ca3af;">Automated Daily Institutional Briefing | Asia/Kolkata</p>
-            </div>
-
-            <p style="margin-top: 18px; font-size: 14px;">Hello Team,</p>
-            <p style="font-size: 14px;">The daily portfolio audit, Strategy B ratchet stops, and new breakout setups have been compiled. Find the full multi-sheet audit attached:</p>
-
-            <div class="card">
-                <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1e3a8a;">📊 Key Portfolio Snapshot:</div>
-                <div style="font-size: 13px; line-height: 1.8;">
-                    • <b>Active Holdings:</b> 5 Positions (Trent, Dixon, BEL, HAL, VBL)<br>
-                    • <b>Total Capital Invested:</b> ₹6,12,165.66<br>
-                    • <b>Current Portfolio Value:</b> ₹6,29,926.15<br>
-                    • <b>Unrealized P&L:</b> <span class="green">+₹17,760.49 (+2.90%)</span><br>
-                    • <b>Top Performer:</b> TRENT (LTP: ₹3,036.50 | <b>+6.38%</b> | Trailing T2 Stop Active)<br>
-                    • <b>Strategy B Engine:</b> Target-as-Stop-Loss + 2% Buffer Active
-                </div>
-            </div>
-
-            <div class="card">
-                <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #4c1d95;">📑 Attached Workbook Structure:</div>
-                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #374151;">
-                    <li><b>MAIN_IN_PROCESS:</b> Live active positions with trailing stops, gap to target, and latest news/plans.</li>
-                    <li><b>WINS:</b> All trades successfully closed in profit with rationale and days held.</li>
-                    <li><b>FAILED:</b> Stopped-out trades with systematic loss containment post-mortem.</li>
-                    <li><b>DAILY_BREAKOUT_ANALYSIS:</b> New momentum candidates with targets, SL, and news catalysts.</li>
-                </ul>
-            </div>
-
-            <div class="footer">
-                Automated by Google Cloud Platform (Cloud Run & BigQuery) | Project: momentum-based-nifty-500<br>
-                Recipient list: sumith7114@gmail.com, mannathkatariya67@gmail.com
-            </div>
+    <body style="font-family: Arial, sans-serif; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #0d1117; color: #fff; padding: 15px; border-radius: 6px; text-align: center;">
+            <h2 style="margin: 0;">⚡ MASTER PORTFOLIO LIFECYCLE REPORT</h2>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #9ca3af;">Institutional Momentum Desk | Active & Historical Audit</p>
         </div>
+        <p>Hi Sumith,</p>
+        <p>The updated portfolio lifecycle workbook is attached with live market prices, Strategy B ratchets, and closed trade audits:</p>
+        <ul>
+            <li><b>MAIN_IN_PROCESS:</b> 5 Active holdings (Trent, Dixon, HAL, BEL, VBL) with trailed stop-losses & catalysts.</li>
+            <li><b>WINS:</b> Successfully closed winning trades with net profit in INR and holding days.</li>
+            <li><b>FAILED:</b> Stopped-out trades with strict ₹1.25L loss containment post-mortem.</li>
+            <li><b>DAILY_BREAKOUT_ANALYSIS:</b> New momentum breakout setups with targets and news.</li>
+        </ul>
+        <p style="font-size: 11px; color: #9ca3af;">Generated automatically via BigQuery & Cloud Run.</p>
     </body>
     </html>
     """
+    msg.attach(MIMEText(html, "html"))
 
-    msg.attach(MIMEText(html_content, "html"))
-
-    # Attach Excel file
-    with open(ATTACHMENT_PATH, "rb") as f:
+    with open(MASTER_REPORT, "rb") as f:
         part = MIMEBase("application", "octet-stream")
         part.set_payload(f.read())
         encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f"attachment; filename=Nifty500_Lifecycle_Portfolio_Report.xlsx")
+        part.add_header("Content-Disposition", f"attachment; filename=Nifty500_Master_Portfolio_Report.xlsx")
         msg.attach(part)
 
-    try:
-        print(f"[*] Connecting to SMTP server (smtp.gmail.com:587) via {SENDER_EMAIL}...")
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(SENDER_EMAIL, password.strip())
-        server.send_message(msg)
-        server.quit()
-        print(f"[✓] Email successfully dispatched to: {', '.join(RECIPIENTS)}")
-        return True
-    except Exception as e:
-        print(f"[!] Failed to send email: {e}")
+    server.send_message(msg)
+    print(f"[✓] Master Portfolio Report dispatched to: {SUMITH_EMAIL}")
+    if owns_server: server.quit()
+    return True
+
+def send_to_mannath(server = None, app_password: str = None, user_confirmed: bool = False):
+    """
+    Dispatches Stocks Breakout Analysis ONLY to Mannath.
+    STRICT POLICY: Executes ONLY when user_confirmed == True.
+    Contains ZERO holdings, ZERO portfolio values, and ZERO personal balances.
+    """
+    if not user_confirmed:
+        print("\n" + "="*70)
+        print("[GATEKEEPER ENGAGED] Email to mannathkatariya67@gmail.com is PROTECTED.")
+        print("Rule Enforced: 'SEND ONLY IF I SAY'.")
+        print("To confirm and dispatch this specific email, pass --confirm-mannath.")
+        print("="*70 + "\n")
         return False
 
+    owns_server = False
+    if server is None:
+        server, _ = get_smtp_connection(app_password)
+        if not server: return False
+        owns_server = True
+
+    if not os.path.exists(STOCKS_ONLY_REPORT):
+        print(f"[!] Stocks-only report missing: {STOCKS_ONLY_REPORT}")
+        return False
+
+    msg = MIMEMultipart()
+    msg["From"] = f"NIFTY 500 Research Desk <{SENDER_EMAIL}>"
+    msg["To"] = MANNATH_EMAIL
+    msg["Subject"] = f"📈 NIFTY 500 Daily Momentum Breakout Analysis [{datetime.now().strftime('%d-%b-%Y')}]"
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1e1b4b; color: #fff; padding: 15px; border-radius: 6px; text-align: center;">
+            <h2 style="margin: 0;">📈 NIFTY 500 DAILY STOCK BREAKOUT ANALYSIS</h2>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #c7d2fe;">Technical Breakouts, Targets, Stop-Loss & Catalysts</p>
+        </div>
+        <p>Hi Mannath,</p>
+        <p>Attached is today's institutional momentum scan report for NIFTY 500 stocks displaying fresh breakout setups.</p>
+        <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 12px; margin: 12px 0;">
+            <b>Report Details:</b>
+            <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+                <li>Breakout candidate symbols with Setup Grade (A+ / A)</li>
+                <li>Pivot Breakout Price Triggers & Structural Stop-Loss (7%)</li>
+                <li>Multi-Horizon Targets (Target 1: 2R, Target 2: 3R, Target 3: 5R)</li>
+                <li>20-Day Volume Expansion %, Daily & Weekly RSI</li>
+                <li>Corporate News, Growth Catalysts & Business Developments</li>
+            </ul>
+        </div>
+        <p style="font-size: 11px; color: #9ca3af;">Research Desk Briefing | Asia/Kolkata</p>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with open(STOCKS_ONLY_REPORT, "rb") as f:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f"attachment; filename=Nifty500_Stock_Breakout_Analysis.xlsx")
+        msg.attach(part)
+
+    server.send_message(msg)
+    print(f"[✓] Stock Breakout Analysis Report dispatched to: {MANNATH_EMAIL}")
+    if owns_server: server.quit()
+    return True
+
 if __name__ == "__main__":
-    pwd = sys.argv[1] if len(sys.argv) > 1 else None
-    send_lifecycle_report(pwd)
+    confirm_mannath = "--confirm-mannath" in sys.argv
+    target = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "all"
+
+    server, pwd = get_smtp_connection()
+    if server:
+        if target in ["all", "sumith"]:
+            send_to_sumith(server)
+        if target in ["all", "mannath"]:
+            send_to_mannath(server, user_confirmed=confirm_mannath)
+        server.quit()

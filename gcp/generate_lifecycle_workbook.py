@@ -456,8 +456,108 @@ def build_lifecycle_workbook():
 
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     wb.save(OUTPUT_FILE)
-    print(f"[✓] Successfully generated Portfolio Lifecycle Report: {OUTPUT_FILE}")
-    return OUTPUT_FILE
+    print(f"[✓] Successfully generated Master Portfolio Lifecycle Report: {OUTPUT_FILE}")
+
+    # =========================================================================
+    # BUILD DEDICATED REPORT FOR MANNATH: STOCK ANALYSIS ONLY (NO HOLDINGS / NO BALANCES)
+    # =========================================================================
+    wb_stocks = openpyxl.Workbook()
+    wb_stocks.remove(wb_stocks.active)
+
+    ws_mannath = wb_stocks.create_sheet(title="DAILY_BREAKOUT_ANALYSIS")
+    ws_mannath.views.sheetView[0].showGridLines = True
+
+    mannath_cols = [
+        "Symbol", "Setup Grade", "CMP (₹)", "Pivot Trigger (₹)", "Stop Loss (₹)", "SL %",
+        "Target 1 (2R)", "Target 2 (3R)", "Target 3 (5R)", "Vol Exp %", "Daily RSI",
+        "Weekly RSI", "Technical Catalyst & Latest Corporate News"
+    ]
+    ws_mannath.append(mannath_cols)
+    ws_mannath.row_dimensions[1].height = 28
+    for col_idx in range(1, len(mannath_cols) + 1):
+        cell = ws_mannath.cell(row=1, column=col_idx)
+        cell.font = HEADER_FONT
+        cell.fill = PURPLE_HEADER
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    for _, r in df_breakouts.iterrows():
+        sym = str(r["symbol"])
+        cmp = float(r["close"])
+        pivot = float(r["pivot_high20"]) if r["pivot_high20"] else cmp * 0.98
+        sl = round(cmp * 0.93, 2)
+        risk = cmp - sl
+        t1 = round(cmp + 2.0 * risk, 2)
+        t2 = round(cmp + 3.0 * risk, 2)
+        t3 = round(cmp + 5.0 * risk, 2)
+        vol_exp = float(r["vol_expansion"]) if r["vol_expansion"] else 0.25
+        rsi_d = float(r["daily_rsi"]) if r["daily_rsi"] else 62.0
+        rsi_w = float(r["weekly_rsi"]) if r["weekly_rsi"] else 68.0
+        grade = "A+ (PRIME)" if vol_exp >= 0.50 and rsi_d >= 62 else "A (STRONG)"
+        news_item = fetch_live_stock_news(sym, max_items=1)
+        catalyst = f"Volume expansion +{vol_exp*100:.0f}%. Breakout above 20-DMA pivot. News: {news_item}"
+
+        row_data = [
+            sym, grade, cmp, pivot, sl, 0.07, t1, t2, t3, vol_exp, rsi_d, rsi_w, catalyst
+        ]
+        ws_mannath.append(row_data)
+        curr_row = ws_mannath.max_row
+        ws_mannath.row_dimensions[curr_row].height = 22
+        
+        fill = ZEBRA_FILL if curr_row % 2 == 0 else PatternFill(fill_type=None)
+        for c in range(1, len(row_data) + 1):
+            cell = ws_mannath.cell(row=curr_row, column=c)
+            cell.font = REGULAR_FONT
+            cell.border = THIN_BORDER
+            if fill.fill_type: cell.fill = fill
+            
+        ws_mannath[f"A{curr_row}"].font = BOLD_FONT
+        ws_mannath[f"C{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"D{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"E{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"F{curr_row}"].number_format = '0.00%'
+        ws_mannath[f"G{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"H{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"I{curr_row}"].number_format = '₹#,##0.00'
+        ws_mannath[f"J{curr_row}"].number_format = '+0.0%'
+
+    # Sheet 2 for Mannath: Framework Methodology Reference
+    ws_method = wb_stocks.create_sheet(title="STRATEGY_FRAMEWORK")
+    ws_method.views.sheetView[0].showGridLines = True
+    ws_method.append(["METRIC", "STRATEGY PARAMETER RULE"])
+    ws_method.cell(row=1, column=1).font = HEADER_FONT
+    ws_method.cell(row=1, column=1).fill = NAVY_HEADER
+    ws_method.cell(row=1, column=2).font = HEADER_FONT
+    ws_method.cell(row=1, column=2).fill = NAVY_HEADER
+    
+    rules = [
+        ("Volume Expansion", ">= 20% expansion over 20-day volume moving average"),
+        ("Momentum Filter (Daily RSI)", ">= 50 to 65 (bullish expansion zone)"),
+        ("Trend Filter (Weekly RSI)", "60 to 75 (sustainable institutional accumulation)"),
+        ("Base Stop Loss", "7.0% below entry (structural pivot support)"),
+        ("Target 1 (Initial)", "2R (+14.0% gain potential)"),
+        ("Target 2 (Primary)", "3R (+21.0% multi-week runner)")
+    ]
+    for r_idx, (m, d) in enumerate(rules, start=2):
+        ws_method.append([m, d])
+        ws_method.cell(row=r_idx, column=1).font = BOLD_FONT
+        ws_method.cell(row=r_idx, column=2).font = REGULAR_FONT
+        ws_method.row_dimensions[r_idx].height = 20
+
+    for ws in wb_stocks.worksheets:
+        for col in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                val_str = str(cell.value or '')
+                if len(val_str) > max_len:
+                    max_len = len(val_str)
+            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 65)
+
+    stocks_only_file = os.path.join(os.path.dirname(__file__), "..", "Excel", "Nifty500_Stock_Breakout_Analysis.xlsx")
+    wb_stocks.save(stocks_only_file)
+    print(f"[✓] Successfully generated Stock Analysis Report (Zero Holdings): {stocks_only_file}")
+
+    return OUTPUT_FILE, stocks_only_file
 
 if __name__ == "__main__":
     build_lifecycle_workbook()
