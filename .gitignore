@@ -26,6 +26,7 @@ Excel/*.xltm
 *.log
 ~$*
 conversation_backup/
+master_vault_backup/
 
 # OS & Editor
 .DS_Store
