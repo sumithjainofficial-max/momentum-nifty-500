@@ -29,10 +29,40 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MASTER_REPORT = os.path.join(BASE_DIR, "Excel", "Nifty500_Lifecycle_Portfolio_Report.xlsx")
 STOCKS_ONLY_REPORT = os.path.join(BASE_DIR, "Excel", "Nifty500_Stock_Breakout_Analysis.xlsx")
 
+def load_app_password():
+    """Securely resolves Gmail App Password from environment or local .env file."""
+    # 1. System/User Environment variable
+    pwd = os.getenv("GMAIL_APP_PASSWORD")
+    if pwd:
+        return pwd.strip().replace(" ", "")
+
+    # 2. Local secure env files (excluded by .gitignore)
+    env_paths = [
+        os.path.join(BASE_DIR, "email_credentials.env"),
+        os.path.join(BASE_DIR, ".env"),
+        os.path.join(BASE_DIR, "Angelone", "CREDENTIALS.env")
+    ]
+    for ep in env_paths:
+        if os.path.exists(ep):
+            try:
+                with open(ep, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("GMAIL_APP_PASSWORD="):
+                            val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                return val.replace(" ", "")
+            except Exception:
+                pass
+    return None
+
 def get_smtp_connection(app_password: str = None):
-    password = app_password or os.getenv("GMAIL_APP_PASSWORD")
+    password = app_password or load_app_password()
     if not password:
-        print("[!] GMAIL_APP_PASSWORD not set. Generate a 16-character Google App Password at: https://myaccount.google.com/apppasswords")
+        print("\n[!] GMAIL_APP_PASSWORD not found.")
+        print("To save your password permanently so you never have to type it again:")
+        print("Create 'email_credentials.env' in project root with: GMAIL_APP_PASSWORD=your_16_char_password")
+        print("Or share the 16-character code here and I will save it to email_credentials.env for you.\n")
         return None, None
     server = smtplib.SMTP("smtp.gmail.com", 587)
     server.starttls()
