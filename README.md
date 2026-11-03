@@ -69,3 +69,4 @@ python nifty500_gcp_pipeline.py --mode scan --data real
 ```powershell
 .\cloud_run\deploy.ps1
 ```
+
