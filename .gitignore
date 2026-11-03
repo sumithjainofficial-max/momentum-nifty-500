@@ -25,6 +25,7 @@ Excel/*.xltm
 .streamlit/
 *.log
 ~$*
+conversation_backup/
 
 # OS & Editor
 .DS_Store
