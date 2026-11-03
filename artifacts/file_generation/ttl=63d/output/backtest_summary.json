@@ -1,0 +1,10 @@
+{
+  "total_trades": 362,
+  "batting_average_win_rate": "41.4%",
+  "avg_gain_pct": "12.0%",
+  "avg_loss_pct": "7.2%",
+  "gain_loss_ratio": "1.7:1",
+  "expectancy_pct_per_trade": "+0.77%",
+  "profit_factor": 1.18,
+  "minervini_matrix_alignment": "Matches Minervini Table tier: ~41% Win Rate with tight ~7.2% losses generates continuous positive compounding."
+}

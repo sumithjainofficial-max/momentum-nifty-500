@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-11-03 15:11:26",
+  "simulations_count": 10000,
+  "trades_horizon": 250,
+  "initial_capital_inr": 1000000.0,
+  "median_ending_equity_inr": 1357972.45,
+  "mean_ending_equity_inr": 1356094.36,
+  "worst_5pct_var_equity_inr": 1093225.77,
+  "best_5pct_equity_inr": 1617102.18,
+  "median_annual_roi_pct": 35.8,
+  "p50_drawdown_pct": 7.63,
+  "p90_drawdown_pct": 12.7,
+  "p95_drawdown_pct": 14.79,
+  "p99_drawdown_pct": 19.05,
+  "prob_drawdown_exceeding_15pct": 4.66,
+  "prob_drawdown_exceeding_25pct": 0.13,
+  "risk_of_capital_loss_pct": 1.03
+}

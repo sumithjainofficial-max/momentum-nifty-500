@@ -1,0 +1,2 @@
+timestamp,symbol,signal_status,cmp,volume_expansion_pct,daily_rsi,weekly_rsi,market_regime,stop_loss_pct,stop_loss_price,quantity,total_investment,total_risk_rupees,target_1_days,target_2_weeks,target_3_months,min_rr_ratio
+2026-11-03 17:12:47,ACUTAAS,FALSE_BREAKOUT,3710.0,214.1,66.5,54.8,BULLISH (FULL SL),8.5,3394.65,33,122430.0,10406.55,4340.7,4656.05,5286.75,1:2

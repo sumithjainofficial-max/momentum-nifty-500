@@ -1,0 +1,33 @@
+# Environment & Secrets (CRITICAL SECURITY)
+*.env
+CREDENTIALS.env
+credentials.json
+token.json
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Large Excel Backtest Archives (>30MB)
+Excel/FULL BACKTESTTED.xlsx
+Excel/Nifty500_Backtest_Studio.xlsm
+Excel/*.xltm
+
+# Streamlit & Local App Data
+.streamlit/
+*.log
+~$*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

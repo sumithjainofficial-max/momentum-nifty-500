@@ -1,0 +1,21 @@
+[
+  {
+    "timestamp": "2026-11-03 17:12:47",
+    "symbol": "ACUTAAS",
+    "signal_status": "FALSE_BREAKOUT",
+    "cmp": 3710.0,
+    "volume_expansion_pct": 214.1,
+    "daily_rsi": 66.5,
+    "weekly_rsi": 54.8,
+    "market_regime": "BULLISH (FULL SL)",
+    "stop_loss_pct": 8.5,
+    "stop_loss_price": 3394.65,
+    "quantity": 33,
+    "total_investment": 122430.0,
+    "total_risk_rupees": 10406.55,
+    "target_1_days": 4340.7,
+    "target_2_weeks": 4656.05,
+    "target_3_months": 5286.75,
+    "min_rr_ratio": "1:2"
+  }
+]
