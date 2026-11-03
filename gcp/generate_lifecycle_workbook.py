@@ -459,7 +459,8 @@ def build_lifecycle_workbook():
     print(f"[✓] Successfully generated Master Portfolio Lifecycle Report: {OUTPUT_FILE}")
 
     # =========================================================================
-    # BUILD DEDICATED REPORT FOR MANNATH: STOCK ANALYSIS ONLY (NO HOLDINGS / NO BALANCES)
+    # BUILD DEDICATED REPORT FOR MANNATH: STOCK ANALYSIS ONLY (FROM NOW ON ONLY)
+    # Rule Enforced: "SEND ONLY THOSE WHICH ARE GENERATED FROM NOW ON"
     # =========================================================================
     wb_stocks = openpyxl.Workbook()
     wb_stocks.remove(wb_stocks.active)
@@ -468,7 +469,7 @@ def build_lifecycle_workbook():
     ws_mannath.views.sheetView[0].showGridLines = True
 
     mannath_cols = [
-        "Symbol", "Setup Grade", "CMP (₹)", "Pivot Trigger (₹)", "Stop Loss (₹)", "SL %",
+        "Scan Date / Time", "Symbol", "Setup Grade", "CMP (₹)", "Pivot Trigger (₹)", "Stop Loss (₹)", "SL %",
         "Target 1 (2R)", "Target 2 (3R)", "Target 3 (5R)", "Vol Exp %", "Daily RSI",
         "Weekly RSI", "Technical Catalyst & Latest Corporate News"
     ]
@@ -480,45 +481,75 @@ def build_lifecycle_workbook():
         cell.fill = PURPLE_HEADER
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    for _, r in df_breakouts.iterrows():
-        sym = str(r["symbol"])
-        cmp = float(r["close"])
-        pivot = float(r["pivot_high20"]) if r["pivot_high20"] else cmp * 0.98
-        sl = round(cmp * 0.93, 2)
-        risk = cmp - sl
-        t1 = round(cmp + 2.0 * risk, 2)
-        t2 = round(cmp + 3.0 * risk, 2)
-        t3 = round(cmp + 5.0 * risk, 2)
-        vol_exp = float(r["vol_expansion"]) if r["vol_expansion"] else 0.25
-        rsi_d = float(r["daily_rsi"]) if r["daily_rsi"] else 62.0
-        rsi_w = float(r["weekly_rsi"]) if r["weekly_rsi"] else 68.0
-        grade = "A+ (PRIME)" if vol_exp >= 0.50 and rsi_d >= 62 else "A (STRONG)"
-        news_item = fetch_live_stock_news(sym, max_items=1)
-        catalyst = f"Volume expansion +{vol_exp*100:.0f}%. Breakout above 20-DMA pivot. News: {news_item}"
+    # Query ONLY fresh signals generated from now on (strictly filtering out old/past data)
+    q_fresh_signals = f"""
+    SELECT 
+        created_at, scan_date, symbol, signal_status, cmp, volume_expansion_pct,
+        daily_rsi, weekly_rsi, stop_loss_pct, stop_loss_price,
+        target_1_days, target_2_weeks, target_3_months
+    FROM `{PROJECT_ID}.{DATASET_ID}.daily_signals`
+    WHERE created_at >= '2026-11-03 18:36:00'
+    ORDER BY created_at DESC
+    """
+    try:
+        df_fresh = client.query(q_fresh_signals).to_dataframe()
+    except Exception as e:
+        df_fresh = pd.DataFrame()
 
-        row_data = [
-            sym, grade, cmp, pivot, sl, 0.07, t1, t2, t3, vol_exp, rsi_d, rsi_w, catalyst
-        ]
-        ws_mannath.append(row_data)
+    if df_fresh.empty:
+        ws_mannath.append([
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "AWAITING_NEW_SCAN",
+            "FRESH_PIPELINE_ACTIVE",
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            "Rule Active: Send only fresh signals generated from now on (2026-11-03 18:36 onwards). Prior/historical setups excluded. Next signals will automatically populate upon market session scan at 3:35 PM IST."
+        ])
         curr_row = ws_mannath.max_row
-        ws_mannath.row_dimensions[curr_row].height = 22
-        
-        fill = ZEBRA_FILL if curr_row % 2 == 0 else PatternFill(fill_type=None)
-        for c in range(1, len(row_data) + 1):
+        ws_mannath.row_dimensions[curr_row].height = 28
+        for c in range(1, len(mannath_cols) + 1):
             cell = ws_mannath.cell(row=curr_row, column=c)
             cell.font = REGULAR_FONT
             cell.border = THIN_BORDER
-            if fill.fill_type: cell.fill = fill
-            
         ws_mannath[f"A{curr_row}"].font = BOLD_FONT
-        ws_mannath[f"C{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"D{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"E{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"F{curr_row}"].number_format = '0.00%'
-        ws_mannath[f"G{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"H{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"I{curr_row}"].number_format = '₹#,##0.00'
-        ws_mannath[f"J{curr_row}"].number_format = '+0.0%'
+    else:
+        for _, r in df_fresh.iterrows():
+            sym = str(r["symbol"])
+            cmp = float(r["cmp"])
+            pivot = cmp * 0.985
+            sl = float(r["stop_loss_price"])
+            sl_pct = float(r["stop_loss_pct"]) / 100.0 if r["stop_loss_pct"] else 0.07
+            t1 = float(r["target_1_days"])
+            t2 = float(r["target_2_weeks"])
+            t3 = float(r["target_3_months"])
+            vol_exp = float(r["volume_expansion_pct"]) / 100.0 if r["volume_expansion_pct"] else 0.25
+            rsi_d = float(r["daily_rsi"]) if r["daily_rsi"] else 62.0
+            rsi_w = float(r["weekly_rsi"]) if r["weekly_rsi"] else 68.0
+            grade = "A+ (PRIME)" if vol_exp >= 0.50 and rsi_d >= 62 else "A (STRONG)"
+            news_item = fetch_live_stock_news(sym, max_items=1)
+            catalyst = f"Fresh Breakout. Vol expansion +{vol_exp*100:.0f}%. News: {news_item}"
+
+            row_data = [
+                str(r["created_at"])[:16], sym, grade, cmp, pivot, sl, sl_pct, t1, t2, t3, vol_exp, rsi_d, rsi_w, catalyst
+            ]
+            ws_mannath.append(row_data)
+            curr_row = ws_mannath.max_row
+            ws_mannath.row_dimensions[curr_row].height = 22
+            fill = ZEBRA_FILL if curr_row % 2 == 0 else PatternFill(fill_type=None)
+            for c in range(1, len(row_data) + 1):
+                cell = ws_mannath.cell(row=curr_row, column=c)
+                cell.font = REGULAR_FONT
+                cell.border = THIN_BORDER
+                if fill.fill_type: cell.fill = fill
+                
+            ws_mannath[f"B{curr_row}"].font = BOLD_FONT
+            ws_mannath[f"D{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"E{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"F{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"G{curr_row}"].number_format = '0.00%'
+            ws_mannath[f"H{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"I{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"J{curr_row}"].number_format = '₹#,##0.00'
+            ws_mannath[f"K{curr_row}"].number_format = '+0.0%'
 
     # Sheet 2 for Mannath: Framework Methodology Reference
     ws_method = wb_stocks.create_sheet(title="STRATEGY_FRAMEWORK")
