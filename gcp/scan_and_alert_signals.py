@@ -348,3 +348,4 @@ if __name__ == "__main__":
         send_test_signal_alert()
     else:
         scan_and_alert(force=args.force)
+
