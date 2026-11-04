@@ -8,3 +8,4 @@ $Shortcut.Description = "NIFTY 500 Momentum Desk - Automated Scan & Live Dashboa
 $Shortcut.IconLocation = "shell32.dll,244"
 $Shortcut.Save()
 Write-Host "Created shortcut successfully at: $ShortcutPath"
+

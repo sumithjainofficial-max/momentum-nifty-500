@@ -168,29 +168,130 @@ def update_excel(records):
         return
 
     import openpyxl
-    wb = openpyxl.load_workbook(excel_path)
-    ws = wb["FORWARD_TEST_DESK"]
-    
-    for idx, r in enumerate(records, start=9):
-        ws.cell(idx, 1, r["symbol"])
-        ws.cell(idx, 2, r["trade_status"])
-        ws.cell(idx, 3, r["qty"])
-        ws.cell(idx, 4, r["avg_buy_price"])
-        ws.cell(idx, 5, f"=C{idx}*D{idx}")
-        ws.cell(idx, 6, r["ltp"])
-        ws.cell(idx, 7, f"=C{idx}*F{idx}")
-        ws.cell(idx, 8, f"=G{idx}-E{idx}")
-        ws.cell(idx, 9, f"=IF(E{idx}>0, H{idx}/E{idx}, 0)")
-        ws.cell(idx, 10, r["daily_change_pct"])
-        ws.cell(idx, 11, r["live_volume"])
-        ws.cell(idx, 12, r["vol_increase_50d_pct"])
-        ws.cell(idx, 17, r["trailed_sl"])
-        ws.cell(idx, 18, r["planned_target"])
-        ws.cell(idx, 19, r["rr_ratio"])
-        
-    wb.save(excel_path)
-    print(f"[✓] Successfully updated Excel Studio: {excel_path} with REAL market prices!")
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    try:
+        wb = openpyxl.load_workbook(excel_path)
+    except Exception as e:
+        print(f"[!] Warning: Could not open {excel_path} ({e}). It might be open in Excel.")
+        return
+
+    thin_border = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9")
+    )
+    zebra_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+
+    # 1. Update SWING_FORWARD_DESK
+    if "SWING_FORWARD_DESK" in wb.sheetnames:
+        ws_swing = wb["SWING_FORWARD_DESK"]
+        for idx, r in enumerate(records, start=9):
+            ws_swing.cell(idx, 1, r["symbol"])
+            ws_swing.cell(idx, 2, r["trade_status"])
+            ws_swing.cell(idx, 3, r["qty"])
+            ws_swing.cell(idx, 4, r["avg_buy_price"])
+            ws_swing.cell(idx, 5, f"=C{idx}*D{idx}")
+            ws_swing.cell(idx, 6, r["ltp"])
+            ws_swing.cell(idx, 7, f"=C{idx}*F{idx}")
+            ws_swing.cell(idx, 8, f"=G{idx}-E{idx}")
+            ws_swing.cell(idx, 9, f"=IF(E{idx}>0, H{idx}/E{idx}, 0)")
+            ws_swing.cell(idx, 10, f"=IF(D{idx}>0, (F{idx}-D{idx})/D{idx}, 0)")
+            ws_swing.cell(idx, 11, r["trailed_sl"])
+            ws_swing.cell(idx, 12, r["planned_target"])
+            ws_swing.cell(idx, 13, round(r["avg_buy_price"] + 3.0 * (r["avg_buy_price"] * 0.07), 2))
+            ws_swing.cell(idx, 16, r["live_volume"])
+            ws_swing.cell(idx, 17, r["vol_increase_50d_pct"])
+            ws_swing.cell(idx, 18, r["daily_rsi"])
+
+    # 2. Update LONG_TERM_FORWARD_DESK
+    if "LONG_TERM_FORWARD_DESK" in wb.sheetnames:
+        ws_long = wb["LONG_TERM_FORWARD_DESK"]
+        for idx, r in enumerate(records, start=9):
+            ws_long.cell(idx, 1, r["symbol"])
+            ws_long.cell(idx, 3, r["qty"])
+            ws_long.cell(idx, 4, r["avg_buy_price"])
+            ws_long.cell(idx, 5, f"=C{idx}*D{idx}")
+            ws_long.cell(idx, 6, r["ltp"])
+            ws_long.cell(idx, 7, f"=C{idx}*F{idx}")
+            ws_long.cell(idx, 8, f"=G{idx}-E{idx}")
+            ws_long.cell(idx, 9, f"=IF(E{idx}>0, H{idx}/E{idx}, 0)")
+            ws_long.cell(idx, 10, f"=IF(D{idx}>0, (F{idx}-D{idx})/D{idx}, 0)")
+            ws_long.cell(idx, 16, r["live_volume"])
+
+    # 3. Update FORWARD_TEST_HISTORY from BigQuery
+    if "FORWARD_TEST_HISTORY" in wb.sheetnames:
+        ws_hist = wb["FORWARD_TEST_HISTORY"]
+        try:
+            client = get_bq_client()
+            q_hist = f"""
+            SELECT 
+                CAST(as_of_date AS STRING) as as_of_date,
+                symbol, trade_status, qty, avg_buy_price, total_invested,
+                ltp, current_value, unrealized_pnl, pnl_pct, daily_change_pct,
+                trailed_sl, planned_target, live_volume, daily_rsi
+            FROM `{PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking`
+            ORDER BY as_of_date DESC, unrealized_pnl DESC
+            """
+            df_hist = client.query(q_hist).to_dataframe()
+            for row_i in range(5, max(ws_hist.max_row + 1, 50)):
+                for col_i in range(1, 19):
+                    ws_hist.cell(row_i, col_i).value = None
+
+            for idx, r in df_hist.iterrows():
+                curr_r = 5 + idx
+                s_date = str(r["as_of_date"])
+                sym = str(r["symbol"])
+                status = str(r["trade_status"])
+                qty = int(r["qty"])
+                buy_p = float(r["avg_buy_price"])
+                inv = float(r["total_invested"])
+                ltp = float(r["ltp"])
+                val = float(r["current_value"])
+                pnl = float(r["unrealized_pnl"])
+                pct = float(r["pnl_pct"])
+                chg = float(r["daily_change_pct"])
+                sl = float(r["trailed_sl"])
+                t1 = float(r["planned_target"])
+                t2 = round(buy_p + 3.0 * (buy_p * 0.07), 2)
+                vol = int(r["live_volume"])
+                rsi = float(r["daily_rsi"])
+                notes = "Historical snapshot archive"
+
+                ws_hist.cell(curr_r, 1, s_date).alignment = Alignment(horizontal="center")
+                ws_hist.cell(curr_r, 2, "SWING (2-6W)").font = Font(name="Calibri", size=10, bold=True)
+                ws_hist.cell(curr_r, 3, sym).font = Font(name="Calibri", size=10, bold=True)
+                ws_hist.cell(curr_r, 4, status)
+                ws_hist.cell(curr_r, 5, qty).number_format = "#,##0"
+                ws_hist.cell(curr_r, 6, buy_p).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 7, inv).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 8, ltp).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 9, val).number_format = "₹#,##0.00"
+                c_pnl = ws_hist.cell(curr_r, 10, pnl)
+                c_pnl.number_format = "₹#,##0.00"
+                c_pct = ws_hist.cell(curr_r, 11, pct)
+                c_pct.number_format = "+0.00%;-0.00%;0.00%"
+                ws_hist.cell(curr_r, 12, chg).number_format = "+0.00%;-0.00%;0.00%"
+                ws_hist.cell(curr_r, 13, sl).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 14, t1).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 15, t2).number_format = "₹#,##0.00"
+                ws_hist.cell(curr_r, 16, vol).number_format = "#,##0"
+                ws_hist.cell(curr_r, 17, rsi).number_format = "0.0"
+                ws_hist.cell(curr_r, 18, notes)
+
+                fill = zebra_fill if curr_r % 2 == 0 else PatternFill(fill_type=None)
+                for c in range(1, 19):
+                    ws_hist.cell(curr_r, c).border = thin_border
+                    if fill.fill_type: ws_hist.cell(curr_r, c).fill = fill
+                ws_hist.row_dimensions[curr_r].height = 20
+        except Exception as e:
+            print(f"[!] Warning syncing history sheet: {e}")
+
+    try:
+        wb.save(excel_path)
+        print(f"[OK] Successfully updated Excel Studio: {excel_path} with REAL market prices across Swing, Long-Term, and History!")
+    except Exception as e:
+        print(f"[!] Could not save {excel_path}: {e}")
 
 if __name__ == "__main__":
     sync_live_prices()
-

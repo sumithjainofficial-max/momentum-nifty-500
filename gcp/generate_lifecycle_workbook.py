@@ -799,6 +799,74 @@ def build_lifecycle_workbook():
         ws_long[f"J{curr_row}"].number_format = '+0.0%'
         ws_long[f"L{curr_row}"].number_format = '₹#,##0.00'
 
+    # =========================================================================
+    # SHEET 8: FORWARD_TEST_HISTORY (Daily Forward Testing Audit Archive)
+    # =========================================================================
+    ws_hist = wb.create_sheet(title="FORWARD_TEST_HISTORY")
+    ws_hist.views.sheetView[0].showGridLines = True
+    hist_headers = [
+        "Snapshot Date", "Strategy Desk", "Symbol", "Trade Status", "Qty",
+        "Avg Buy Price (₹)", "Total Invested (₹)", "LTP / Close (₹)",
+        "Valuation (₹)", "Unrealized P&L (₹)", "Return %", "Day Change %",
+        "Trailed SL (₹)", "Target 1 (₹)", "Target 2 (₹)", "Volume", "Daily RSI", "Notes"
+    ]
+    ws_hist.append(hist_headers)
+    ws_hist.row_dimensions[1].height = 28
+    for col_idx in range(1, len(hist_headers) + 1):
+        cell = ws_hist.cell(row=1, column=col_idx)
+        cell.font = HEADER_FONT
+        cell.fill = PURPLE_HEADER
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    q_hist_all = f"""
+    SELECT 
+        CAST(as_of_date AS STRING) as as_of_date,
+        symbol, trade_status, qty, avg_buy_price, total_invested,
+        ltp, current_value, unrealized_pnl, pnl_pct, daily_change_pct,
+        trailed_sl, planned_target, live_volume, daily_rsi
+    FROM `{PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking`
+    ORDER BY as_of_date DESC, unrealized_pnl DESC
+    """
+    try:
+        df_hist_all = client.query(q_hist_all).to_dataframe()
+        for _, r in df_hist_all.iterrows():
+            buy_p = float(r["avg_buy_price"])
+            t2 = round(buy_p + 3.0 * (buy_p * 0.07), 2)
+            row_data = [
+                str(r["as_of_date"]), "SWING (2-6W)", str(r["symbol"]), str(r["trade_status"]),
+                int(r["qty"]), buy_p, float(r["total_invested"]), float(r["ltp"]),
+                float(r["current_value"]), float(r["unrealized_pnl"]), float(r["pnl_pct"]),
+                float(r["daily_change_pct"]), float(r["trailed_sl"]), float(r["planned_target"]),
+                t2, int(r["live_volume"]), float(r["daily_rsi"]), "Historical snapshot audit"
+            ]
+            ws_hist.append(row_data)
+            curr_row = ws_hist.max_row
+            ws_hist.row_dimensions[curr_row].height = 20
+            fill = ZEBRA_FILL if curr_row % 2 == 0 else PatternFill(fill_type=None)
+            for c in range(1, len(row_data) + 1):
+                cell = ws_hist.cell(row=curr_row, column=c)
+                cell.font = REGULAR_FONT
+                cell.border = THIN_BORDER
+                if fill.fill_type: cell.fill = fill
+            ws_hist[f"A{curr_row}"].alignment = Alignment(horizontal="center")
+            ws_hist[f"B{curr_row}"].font = BOLD_FONT
+            ws_hist[f"C{curr_row}"].font = BOLD_FONT
+            ws_hist[f"E{curr_row}"].number_format = '#,##0'
+            ws_hist[f"F{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"G{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"H{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"I{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"J{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"K{curr_row}"].number_format = '+0.00%;-0.00%;0.00%'
+            ws_hist[f"L{curr_row}"].number_format = '+0.00%;-0.00%;0.00%'
+            ws_hist[f"M{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"N{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"O{curr_row}"].number_format = '₹#,##0.00'
+            ws_hist[f"P{curr_row}"].number_format = '#,##0'
+            ws_hist[f"Q{curr_row}"].number_format = '0.0'
+    except Exception as e:
+        print(f"[!] Warning fetching forward test history: {e}")
+
     # Auto-fit Column Widths across all sheets
     for ws in wb.worksheets:
         for col in ws.columns:
