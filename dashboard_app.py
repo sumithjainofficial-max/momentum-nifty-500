@@ -33,6 +33,7 @@ st.markdown("""
     .kpi-green { color: #3fb950 !important; }
     .kpi-red { color: #f85149 !important; }
     .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .desk-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,11 +89,11 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Looker Studio Cloud Link")
 st.sidebar.markdown(f"[👉 Open Looker Studio via BigQuery](https://console.cloud.google.com/bigquery?project={PROJECT_ID}&ws=!1m5!1m4!4m3!1s{PROJECT_ID}!2s{DATASET_ID}!3sv_portfolio_summary)")
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Minervini Risk Matrix Active**:\n- Capital Cap: ₹1,25,000/trade\n- No trade count ceiling\n- Hard stop ceiling: 9.0%\n- Bull SL: 7.0% | Bear SL: 3.5%")
+st.sidebar.info("💡 **Minervini Risk Matrix Active**:\n- Capital Cap: ₹1,25,000/trade\n- No trade count ceiling\n- Hard stop ceiling: 9.0%\n- Bull SL: 7.0% | Bear SL: 3.5%\n- Dual Timeframe: Swing (2-6W) & Long-Term (3-12M)")
 
 # Header
 st.title("⚡ NIFTY 500 INSTITUTIONAL MOMENTUM STUDIO")
-st.caption("Real-Time Forward Testing Portfolio & Google BigQuery Data Lake")
+st.caption("Real-Time Forward Testing Portfolio & Google BigQuery Data Lake | Dual Swing & Long-Term Engine")
 
 try:
     df_sum, df_pos, df_bt = load_data()
@@ -128,7 +129,13 @@ if not df_sum.empty:
 st.markdown("---")
 
 # 2. Main Content Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📌 Forward-Test Holdings", "🛡️ Strategy B: Ratchet Engine", "🎲 Monte Carlo Tail-Risk", "📜 Backtest Trade History"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📌 Forward-Test Holdings", 
+    "⚡ Swing vs Long-Term Analysis", 
+    "🎯 Strategy B: Ratchet Engine", 
+    "🎲 Monte Carlo Tail-Risk", 
+    "📜 Backtest Trade History"
+])
 
 with tab1:
     st.subheader("Active Forward-Test Portfolio Tracking")
@@ -164,6 +171,165 @@ with tab1:
         st.info("No active positions found in BigQuery.")
 
 with tab2:
+    st.subheader("⚡ Dual-Timeframe Strategic Matrix: Swing vs Long-Term Analysis")
+    st.caption("Side-by-side institutional execution parameters comparing high-velocity 2-6 week swing setups vs 3-12 month wealth compounders.")
+
+    # Timeframe Framework Comparative Header
+    c_sw, c_lt = st.columns(2)
+    with c_sw:
+        st.markdown("""
+        <div style="background:#13233a; border: 1px solid #1f6feb; border-radius: 8px; padding: 14px;">
+            <h4 style="color:#58a6ff; margin:0 0 8px 0;">⚡ SWING MOMENTUM DESK</h4>
+            <p style="margin:0; font-size:13px; color:#c9d1d9;">
+                <b>Holding Period:</b> 10 to 25 Trading Days (2–6 Weeks)<br>
+                <b>Primary Targets:</b> Target 1 (+14.0% / 2R) & Target 2 (+21.0% / 3R)<br>
+                <b>Trailing Mechanism:</b> 20-EMA / 20-DMA Dynamic Ratchet Stop<br>
+                <b>Capital Objective:</b> High velocity, compounding via rapid asset turnover.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_lt:
+        st.markdown("""
+        <div style="background:#1a2318; border: 1px solid #238636; border-radius: 8px; padding: 14px;">
+            <h4 style="color:#3fb950; margin:0 0 8px 0;">🏛️ LONG-TERM WEALTH DESK</h4>
+            <p style="margin:0; font-size:13px; color:#c9d1d9;">
+                <b>Holding Period:</b> 3 to 12 Months (Positional / Secular)<br>
+                <b>Primary Targets:</b> Target 1 (+35.0%) & Target 2 (+75.0% Multi-Bagger)<br>
+                <b>Trailing Mechanism:</b> 50-DMA Institutional Trailing Floor<br>
+                <b>Capital Objective:</b> Riding Stage-2 secular trends with zero premature noise exits.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Interactive Horizon Filter
+    horizon_view = st.radio("Select Analysis Perspective:", ["Dual Comparative View", "Swing Desk Only (2-6 Weeks)", "Long-Term Wealth Only (3-12 Months)"], horizontal=True)
+
+    # Detailed Holding Pattern Data
+    HOLDING_PATTERNS = {
+        "TRENT": {
+            "pattern": "VCP (3T Contraction) + Blue Sky ATH",
+            "anatomy": "Progressive tightening 21.5% -> 10.9% depth. Right-side volume dry-up (<0.7x 20-DMA). Pushing into Blue Sky All-Time Highs with zero overhead resistance.",
+            "swing_t1": 3260.0, "swing_t2": 3450.0,
+            "swing_plan": "Riding momentum off VCP pivot. Target ₹3,260 (2R). Trailing stop active at ₹2,850 (20-EMA).",
+            "long_floor": 2780.0, "long_t1": 3850.0, "long_t2": 4800.0,
+            "long_plan": "Secular retail expansion compounding (Zudio + Westside). Ride stage-2 advance above 50-DMA."
+        },
+        "DIXON": {
+            "pattern": "High-Tight Flag / Multi-Month Base Breakout",
+            "anatomy": "Tight flag consolidation above 20-DMA & 50-DMA with +50.2% volume expansion. Institutional accumulation breakout above ₹12,150 pivot.",
+            "swing_t1": 13450.0, "swing_t2": 14200.0,
+            "swing_plan": "Breakout above ₹12,150 flag ceiling. Lock Target 1 at ₹13,450. Trailing stop ₹11,600.",
+            "long_floor": 11200.0, "long_t1": 16200.0, "long_t2": 20000.0,
+            "long_plan": "India EMS electronics manufacturing secular leader. Multi-quarter compounder holding above 50-DMA."
+        },
+        "HAL": {
+            "pattern": "Ascending Base / Defense Sector Pivot",
+            "anatomy": "Higher lows along 20-EMA ascending support line. Base breakout above ₹4,900 resistance on steady defense institutional inflows.",
+            "swing_t1": 5450.0, "swing_t2": 5800.0,
+            "swing_plan": "Ascending channel breakout. Trailing stop ₹4,750 (20-EMA). Swing target ₹5,450.",
+            "long_floor": 4550.0, "long_t1": 6500.0, "long_t2": 8200.0,
+            "long_plan": "Defense aerospace multi-year order book execution. Multi-bagger compounder. Hold above 50-DMA."
+        },
+        "BEL": {
+            "pattern": "VCP Stage-2 Continuation Base",
+            "anatomy": "Compact 8% base contraction below ₹375 ceiling. Volume dry-up on pullback, breakout on 11.3M volume surge (+11.5% over 50-DMA).",
+            "swing_t1": 415.0, "swing_t2": 445.0,
+            "swing_plan": "Continuation base breakout. Target ₹415 (2R). Trailing stop ₹365.",
+            "long_floor": 350.0, "long_t1": 510.0, "long_t2": 650.0,
+            "long_plan": "Defense radar & electronics monopoly. Steady institutional compounding above 200-DMA."
+        },
+        "VBL": {
+            "pattern": "Late-Stage Parabolic Channel (Exhaustion Risk)",
+            "anatomy": "Extended advance above 200-DMA with volume expansion turning negative (-13.9%). Momentum slowing down; tight trailing stop mandatory.",
+            "swing_t1": 445.0, "swing_t2": 475.0,
+            "swing_plan": "Late-stage advance. Book 50% partial swing profit at ₹445. Strict stop loss ₹395.",
+            "long_floor": 375.0, "long_t1": 550.0, "long_t2": 700.0,
+            "long_plan": "FMCG beverage global expansion. Trailing stop below 50-DMA (₹375)."
+        }
+    }
+
+    if not df_pos.empty:
+        dual_rows = []
+        for _, r in df_pos.iterrows():
+            sym = str(r["symbol"])
+            cmp = float(r["ltp"])
+            buy = float(r["avg_buy_price"])
+            pnl_pct = float(r["pnl_percentage"])
+            info = HOLDING_PATTERNS.get(sym, {
+                "pattern": "Stage-2 Institutional Base",
+                "anatomy": "Breakout above multi-week pivot with healthy volume expansion.",
+                "swing_t1": round(buy * 1.14, 2), "swing_t2": round(buy * 1.21, 2),
+                "swing_plan": f"Dynamic trailing stop at ₹{round(buy * 0.93, 2):,.2f}.",
+                "long_floor": round(buy * 0.90, 2), "long_t1": round(buy * 1.35, 2), "long_t2": round(buy * 1.75, 2),
+                "long_plan": "Hold secular advance above 50-DMA."
+            })
+            
+            row_dict = {
+                "Symbol": sym,
+                "LTP (₹)": cmp,
+                "Buy Price (₹)": buy,
+                "Current P&L %": pnl_pct,
+                "Chart Pattern": info["pattern"],
+            }
+            if horizon_view in ["Dual Comparative View", "Swing Desk Only (2-6 Weeks)"]:
+                row_dict["Swing Stop (₹)"] = float(r.get("trailed_sl", buy * 0.93))
+                row_dict["Swing Target 1 (2R)"] = info["swing_t1"]
+                row_dict["Swing Target 2 (3R)"] = info["swing_t2"]
+                row_dict["Swing Plan (2-6W)"] = info["swing_plan"]
+            if horizon_view in ["Dual Comparative View", "Long-Term Wealth Only (3-12 Months)"]:
+                row_dict["Long 50-DMA Floor (₹)"] = info["long_floor"]
+                row_dict["Long Target 1 (+35%)"] = info["long_t1"]
+                row_dict["Long Target 2 (+75%)"] = info["long_t2"]
+                row_dict["Long-Term Thesis (3-12M)"] = info["long_plan"]
+            
+            dual_rows.append(row_dict)
+
+        df_dual = pd.DataFrame(dual_rows)
+        fmt_cols = {
+            "LTP (₹)": "₹{:,.2f}",
+            "Buy Price (₹)": "₹{:,.2f}",
+            "Current P&L %": "{:+.2f}%",
+            "Swing Stop (₹)": "₹{:,.2f}",
+            "Swing Target 1 (2R)": "₹{:,.2f}",
+            "Swing Target 2 (3R)": "₹{:,.2f}",
+            "Long 50-DMA Floor (₹)": "₹{:,.2f}",
+            "Long Target 1 (+35%)": "₹{:,.2f}",
+            "Long Target 2 (+75%)": "₹{:,.2f}"
+        }
+        active_fmt = {k: v for k, v in fmt_cols.items() if k in df_dual.columns}
+        
+        st.dataframe(
+            df_dual.style.format(active_fmt).map(
+                lambda v: 'color: #3fb950; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #f85149; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else ''),
+                subset=["Current P&L %"] if "Current P&L %" in df_dual.columns else []
+            ),
+            use_container_width=True
+        )
+
+        # Deep-dive expander for each holding
+        st.markdown("### 🔍 Holding Deep-Dive: Swing vs Long-Term Technical Structure")
+        for _, r in df_pos.iterrows():
+            sym = str(r["symbol"])
+            info = HOLDING_PATTERNS.get(sym)
+            if info:
+                with st.expander(f"📌 {sym} — {info['pattern']} | CMP: ₹{float(r['ltp']):,.2f} ({float(r['pnl_percentage']):+.2f}%)"):
+                    st.write(f"**Pattern Anatomy & Contraction:** {info['anatomy']}")
+                    sc1, sc2 = st.columns(2)
+                    with sc1:
+                        st.markdown("**⚡ Swing Desk (2-6 Weeks)**")
+                        st.write(f"- **Target 1 (2R):** ₹{info['swing_t1']:,.2f}")
+                        st.write(f"- **Target 2 (3R):** ₹{info['swing_t2']:,.2f}")
+                        st.write(f"- **Action Plan:** {info['swing_plan']}")
+                    with sc2:
+                        st.markdown("**🏛️ Long-Term Wealth (3-12 Months)**")
+                        st.write(f"- **50-DMA Trailing Floor:** ₹{info['long_floor']:,.2f}")
+                        st.write(f"- **Long Target 1 (+35%):** ₹{info['long_t1']:,.2f}")
+                        st.write(f"- **Long Target 2 (+75% Multi-Bagger):** ₹{info['long_t2']:,.2f}")
+                        st.write(f"- **Investment Thesis:** {info['long_plan']}")
+
+with tab3:
     st.subheader("🎯 Strategy B: Dynamic Target-as-Stop-Loss Ratchet Desk")
     st.caption("Active Rules: When Target 1 (1:2 R:R) is reached -> Target 1 becomes the new Stop Loss, Target 2 becomes primary target. Same-day achievement: 2% intraday buffer; confirm close >= Target 1 to lock.")
     
@@ -231,7 +397,7 @@ with tab2:
         with c_c4:
             st.metric("Multi-Bagger Runners", "61 Trades", "Captured +20% to +42% gains")
 
-with tab2:
+with tab4:
     st.subheader("10,000-Iteration Monte Carlo Simulation (Compute Engine Scale)")
     
     c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -259,7 +425,7 @@ with tab2:
     fig.update_layout(template="plotly_dark", height=380)
     st.plotly_chart(fig, use_container_width=True)
 
-with tab3:
+with tab5:
     st.subheader("Verified Backtest Trade Sample (Real 5Y NSE Data)")
     if not df_bt.empty:
         st.dataframe(
@@ -272,4 +438,3 @@ with tab3:
             }).map(lambda v: 'color: #3fb950; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #f85149; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else ''), subset=["net_pnl_pct", "net_pnl_rupees"]),
             use_container_width=True
         )
-
