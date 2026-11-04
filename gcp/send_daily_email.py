@@ -185,14 +185,36 @@ def send_to_mannath(server = None, app_password: str = None, user_confirmed: boo
     if owns_server: server.quit()
     return True
 
+def send_buy_signal_text_alert(signals=None, is_test: bool = False):
+    """Dispatches instant plain text Buy Signal alerts to Sumith (sumith7114@gmail.com)."""
+    try:
+        try:
+            from gcp.scan_and_alert_signals import send_plain_text_signal_email, scan_and_alert, send_test_signal_alert
+        except ImportError:
+            sys.path.insert(0, os.path.dirname(__file__))
+            from scan_and_alert_signals import send_plain_text_signal_email, scan_and_alert, send_test_signal_alert
+            
+        if is_test:
+            return send_test_signal_alert()
+        elif signals:
+            return send_plain_text_signal_email(signals)
+        else:
+            return scan_and_alert(force=False)
+    except Exception as e:
+        print(f"[!] Error invoking scan_and_alert_signals: {e}")
+        return False
+
 if __name__ == "__main__":
     confirm_mannath = "--confirm-mannath" in sys.argv
-    target = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "all"
+    target = sys.argv[1].lower() if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "all"
 
-    server, pwd = get_smtp_connection()
-    if server:
-        if target in ["all", "sumith"]:
-            send_to_sumith(server)
-        if target in ["all", "mannath"]:
-            send_to_mannath(server, user_confirmed=confirm_mannath)
-        server.quit()
+    if target in ["signal", "sumith-signal", "buy-signal"]:
+        send_buy_signal_text_alert(is_test=("--test" in sys.argv))
+    else:
+        server, pwd = get_smtp_connection()
+        if server:
+            if target in ["all", "sumith"]:
+                send_to_sumith(server)
+            if target in ["all", "mannath"]:
+                send_to_mannath(server, user_confirmed=confirm_mannath)
+            server.quit()

@@ -126,6 +126,14 @@ def run_daily_pipeline():
         except Exception as e:
             logging.error(f"Failed to stream signals into BQ: {e}")
 
+        # Dispatch instant plain-text buy signal alert to Sumith
+        try:
+            from gcp.scan_and_alert_signals import send_plain_text_signal_email
+            send_plain_text_signal_email(signals)
+            logging.info("[✓] Dispatched plain text buy signal alert to Sumith.")
+        except Exception as e:
+            logging.warning(f"Could not dispatch email in Cloud Run: {e}")
+
     return jsonify({
         "status": "SUCCESS",
         "date": str(today_date),
