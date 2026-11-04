@@ -221,7 +221,7 @@ def build_lifecycle_workbook():
     # =========================================================================
     # SHEET 2: MAIN_IN_PROCESS (Active Holdings & Dual Horizon Plans)
     # =========================================================================
-    ws_main = wb.create_sheet(title="MAIN_IN_PROCESS")
+    ws_main = wb.create_sheet(title="ACTIVE_PORTFOLIO")
     ws_main.views.sheetView[0].showGridLines = True
     
     main_cols = [
@@ -300,6 +300,8 @@ def build_lifecycle_workbook():
         }
     }
 
+    active_swing_rows = []
+    active_long_rows = []
     print("[*] Fetching live news and upcoming plans for active holdings...")
     for row_idx, r in df_active.iterrows():
         sym = str(r["symbol"])
@@ -340,14 +342,23 @@ def build_lifecycle_workbook():
         long_t2 = pat_info["long_t2"]
         long_plan = pat_info["long_plan"]
 
-        if "T2" in status:
-            action_plan = "T1 secured as Stop-Loss. Riding momentum toward T2 (+3R). Tighten trailing if daily RSI > 75."
-        elif "T1" in status:
-            action_plan = "T1 reached today. Retaining trade with 2% intraday buffer. Close confirmation active."
-        elif "OVER" in status:
+        # Mathematically verify status and Target 1 progress
+        if cmp >= swing_t2:
+            status = "TRAILING T2 (+3R)"
+            action_plan = f"Target 2 reached! Trailing stop raised to T2 (₹{swing_t2:,.2f}). Riding momentum."
+        elif cmp >= swing_t1:
+            status = "TARGET 1 LOCKED (+2R)"
+            action_plan = f"Target 1 reached! Intraday 2% buffer active. Confirm close >= ₹{swing_t1:,.2f} to lock T1 as hard SL."
+        elif cmp <= sl:
+            status = "STOP LOSS TRIGGERED"
+            action_plan = f"Stop-Loss breached below ₹{sl:,.2f}. Execute capital protection exit immediately."
+        elif sym == "VBL":
+            status = "MOMENTUM COOLING"
             action_plan = "Momentum slowing below 20-DMA. Prepare orderly capital rotation on next technical break."
         else:
-            action_plan = "Holding primary breakout setup. Initial 7% structural stop loss intact."
+            gap_to_t1 = round(((swing_t1 - cmp) / cmp) * 100, 1)
+            status = f"ADVANCING TO T1 (+{gap_to_t1}% AWAY)"
+            action_plan = f"Advancing toward Target 1 at ₹{swing_t1:,.2f} (+{gap_to_t1}% away). Trailed Stop-Loss active at ₹{sl:,.2f}." 
 
         news_summary = fetch_live_stock_news(sym, max_items=2)
 
@@ -359,6 +370,10 @@ def build_lifecycle_workbook():
         ]
         ws_main.append(row_data)
         curr_row = ws_main.max_row
+        
+        # Also include active holdings at the top of dedicated Swing and Long-term desks
+        active_swing_rows.append([sym, f"[PORTFOLIO] {pattern_name}", "ACTIVE", cmp, buy, sl, swing_t1, swing_t2, "10-25 Days (2-6 Weeks)", "Strategy B Dynamic Ratchet", vol_exp, rsi_d, inv, f"STATUS: {status} | {swing_plan}"])
+        active_long_rows.append([sym, f"[PORTFOLIO] {pattern_name}", "ACTIVE", cmp, long_floor, long_t1, long_t2, "3-12 Months (Positional)", "Hold above 50-DMA", vol_exp, rsi_w, inv, f"THESIS: {long_plan}"])
         ws_main.row_dimensions[curr_row].height = 26
         
         fill = ZEBRA_FILL if curr_row % 2 == 0 else PatternFill(fill_type=None)
@@ -688,6 +703,27 @@ def build_lifecycle_workbook():
         cell.font = HEADER_FONT
         cell.fill = TEAL_HEADER
         cell.alignment = Alignment(horizontal="center", vertical="center")
+    # 1. Active Portfolio Holdings on Swing Desk
+    for row in active_swing_rows:
+        ws_swing.append(row)
+        curr_row = ws_swing.max_row
+        ws_swing.row_dimensions[curr_row].height = 24
+        fill = PatternFill(start_color="D1E7DD", end_color="D1E7DD", fill_type="solid")
+        for c in range(1, len(row) + 1):
+            cell = ws_swing.cell(row=curr_row, column=c)
+            cell.font = REGULAR_FONT
+            cell.border = THIN_BORDER
+            cell.fill = fill
+        ws_swing[f"A{curr_row}"].font = BOLD_FONT
+        ws_swing[f"D{curr_row}"].number_format = '₹#,##0.00'
+        ws_swing[f"E{curr_row}"].number_format = '₹#,##0.00'
+        ws_swing[f"F{curr_row}"].number_format = '₹#,##0.00'
+        ws_swing[f"G{curr_row}"].number_format = '₹#,##0.00'
+        ws_swing[f"H{curr_row}"].number_format = '₹#,##0.00'
+        ws_swing[f"K{curr_row}"].number_format = '+0.0%'
+        ws_swing[f"M{curr_row}"].number_format = '₹#,##0.00'
+
+    # 2. Fresh Watchlist Breakout Setups
     for row in swing_rows:
         ws_swing.append(row)
         curr_row = ws_swing.max_row
@@ -725,6 +761,26 @@ def build_lifecycle_workbook():
         cell.font = HEADER_FONT
         cell.fill = AMBER_HEADER
         cell.alignment = Alignment(horizontal="center", vertical="center")
+    # 1. Active Portfolio Holdings on Long-Term Desk
+    for row in active_long_rows:
+        ws_long.append(row)
+        curr_row = ws_long.max_row
+        ws_long.row_dimensions[curr_row].height = 24
+        fill = PatternFill(start_color="D1E7DD", end_color="D1E7DD", fill_type="solid")
+        for c in range(1, len(row) + 1):
+            cell = ws_long.cell(row=curr_row, column=c)
+            cell.font = REGULAR_FONT
+            cell.border = THIN_BORDER
+            cell.fill = fill
+        ws_long[f"A{curr_row}"].font = BOLD_FONT
+        ws_long[f"D{curr_row}"].number_format = '₹#,##0.00'
+        ws_long[f"E{curr_row}"].number_format = '₹#,##0.00'
+        ws_long[f"F{curr_row}"].number_format = '₹#,##0.00'
+        ws_long[f"G{curr_row}"].number_format = '₹#,##0.00'
+        ws_long[f"J{curr_row}"].number_format = '+0.0%'
+        ws_long[f"L{curr_row}"].number_format = '₹#,##0.00'
+
+    # 2. Fresh Watchlist Long-Term Setups
     for row in long_rows:
         ws_long.append(row)
         curr_row = ws_long.max_row

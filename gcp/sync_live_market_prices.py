@@ -96,14 +96,32 @@ def sync_live_prices():
 
         # Structural Trailed SL & Target
         trailed_sl = round(ltp * 0.93, 2)  # 7% trailing protection
-        risk = avg_buy - (avg_buy * 0.93)
-        mult = 3.0 if item["rr"] == "1:3.0" else 2.0
-        planned_target = round(avg_buy + mult * risk, 2)
+        base_risk = avg_buy * 0.07
+        t1 = round(avg_buy + 2.0 * base_risk, 2)
+        t2 = round(avg_buy + 3.0 * base_risk, 2)
+
+        # Dynamic Status based on Target 1 & 2 Achievement
+        if ltp >= t2:
+            dynamic_status = "TRAILING T2 (+3R)"
+            planned_target = t2
+        elif ltp >= t1:
+            dynamic_status = "TARGET 1 LOCKED (+2R)"
+            planned_target = t2
+        elif ltp < (avg_buy * 0.93):
+            dynamic_status = "STOP LOSS TRIGGERED"
+            planned_target = t1
+        elif sym == "VBL":
+            dynamic_status = "MOMENTUM COOLING"
+            planned_target = t1
+        else:
+            gap_pct = round(((t1 - ltp) / ltp) * 100, 1)
+            dynamic_status = f"HUNTING T1 (+{gap_pct}% AWAY)"
+            planned_target = t1
 
         record = {
             "as_of_date": today,
             "symbol": sym,
-            "trade_status": item["status"],
+            "trade_status": dynamic_status,
             "qty": qty,
             "avg_buy_price": avg_buy,
             "total_invested": total_inv,
