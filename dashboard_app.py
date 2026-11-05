@@ -37,7 +37,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "momentum-based-nifty-500")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "project-dbd1df53-5f72-4b7d-9cf")
 DATASET_ID = "nifty500_quant_studio"
 LOCATION = "asia-south1"
 
