@@ -1,5 +1,6 @@
 # Environment & Secrets (CRITICAL SECURITY)
 *.env
+Angelone/*.env
 CREDENTIALS.env
 credentials.json
 token.json
