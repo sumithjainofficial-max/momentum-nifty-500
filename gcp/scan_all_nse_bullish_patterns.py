@@ -403,3 +403,4 @@ def export_to_excel(matches):
 
 if __name__ == "__main__":
     scan_all_nse()
+
