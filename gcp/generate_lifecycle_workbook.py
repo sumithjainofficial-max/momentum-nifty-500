@@ -24,7 +24,7 @@ from openpyxl.utils import get_column_letter
 # Ensure clean UTF-8 console output
 sys.stdout.reconfigure(encoding="utf-8")
 
-PROJECT_ID = "momentum-based-nifty-500"
+PROJECT_ID = "project-dbd1df53-5f72-4b7d-9cf"
 DATASET_ID = "nifty500_quant_studio"
 OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "..", "Excel", "Nifty500_Lifecycle_Portfolio_Report.xlsx")
 MANNATH_OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "..", "Excel", "Nifty500_Stock_Breakout_Analysis.xlsx")
@@ -70,8 +70,8 @@ def build_lifecycle_workbook():
         symbol, trade_status, avg_buy_price, ltp, qty, total_invested,
         current_value, unrealized_pnl, pnl_pct, trailed_sl, planned_target,
         daily_rsi, weekly_rsi, vol_increase_50d_pct
-    FROM {PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking
-    WHERE as_of_date = (SELECT MAX(as_of_date) FROM {PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking)
+    FROM `{PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking`
+    WHERE as_of_date = (SELECT MAX(as_of_date) FROM `{PROJECT_ID}.{DATASET_ID}.forward_portfolio_tracking`)
     ORDER BY unrealized_pnl DESC
     """
     df_active = client.query(q_active).to_dataframe()

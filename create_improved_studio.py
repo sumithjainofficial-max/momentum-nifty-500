@@ -803,7 +803,7 @@ def build_excel_studio(output_path: str = r"Excel/Nifty500_Backtest_Studio.xlsx"
     # Save to disk
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     wb.save(output_path)
-    print(f"[OK] Successfully generated clean dual-desk studio with audit history: {output_path}")
+    print(f"[✓] Successfully generated clean dual-desk studio with audit history: {output_path}")
 
 if __name__ == '__main__':
     build_excel_studio(r'Excel/Nifty500_Backtest_Studio.xlsx')
