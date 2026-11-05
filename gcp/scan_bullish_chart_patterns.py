@@ -339,3 +339,4 @@ def run_pattern_scan():
 
 if __name__ == "__main__":
     run_pattern_scan()
+
